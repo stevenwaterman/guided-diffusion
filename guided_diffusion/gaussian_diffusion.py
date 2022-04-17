@@ -863,6 +863,8 @@ class GaussianDiffusion:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
         
+        indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
+        
         if paused_noise is not None:
             img = paused_noise
         else:
@@ -873,8 +875,6 @@ class GaussianDiffusion:
 
             if skip_timesteps and init_image is None:
                 init_image = th.zeros_like(img)
-
-            indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
 
             if init_image is not None:
                 my_t = th.ones([shape[0]], device=device, dtype=th.long) * indices[0]
