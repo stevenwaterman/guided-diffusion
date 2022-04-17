@@ -696,7 +696,7 @@ class GaussianDiffusion:
             (t != 0).float().view(-1, *([1] * (len(x.shape) - 1)))
         )  # no noise when t == 0
         sample = mean_pred + nonzero_mask * sigma * noise
-        return {"sample": sample, "pred_xstart": out_orig["pred_xstart"]}
+        return {"sample": sample, "mean_pred": mean_pred, "pred_xstart": out_orig["pred_xstart"]}
 
     def ddim_sample_with_grad(
         self,
@@ -839,6 +839,7 @@ class GaussianDiffusion:
         self,
         model,
         shape,
+        paused_noise=None,
         noise=None,
         clip_denoised=True,
         denoised_fn=None,
@@ -861,19 +862,23 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
-        if noise is not None:
-            img = noise
+        
+        if paused_noise is not None:
+            img = paused_noise
         else:
-            img = th.randn(*shape, device=device)
+            if noise is not None:
+                img = noise
+            else:
+                img = th.randn(*shape, device=device)
 
-        if skip_timesteps and init_image is None:
-            init_image = th.zeros_like(img)
+            if skip_timesteps and init_image is None:
+                init_image = th.zeros_like(img)
 
-        indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
+            indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
 
-        if init_image is not None:
-            my_t = th.ones([shape[0]], device=device, dtype=th.long) * indices[0]
-            img = self.q_sample(init_image, my_t, img)
+            if init_image is not None:
+                my_t = th.ones([shape[0]], device=device, dtype=th.long) * indices[0]
+                img = self.q_sample(init_image, my_t, img)
 
         if progress:
             # Lazy import so that we don't depend on tqdm.
