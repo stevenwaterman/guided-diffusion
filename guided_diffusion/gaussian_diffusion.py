@@ -853,7 +853,6 @@ class GaussianDiffusion:
         randomize_class=False,
         cond_fn_with_grad=False,
         transformation_fn=None,
-        transformation_percent=[]
     ):
         """
         Use DDIM to sample from the model and yield intermediate samples from
@@ -866,7 +865,6 @@ class GaussianDiffusion:
         assert isinstance(shape, (tuple, list))
 
         indices = list(range(self.num_timesteps - skip_timesteps))[::-1]
-        transformation_steps = [int(len(indices)*(1-i)) for i in transformation_percent]
 
         if paused_noise is not None:
             img = paused_noise
@@ -896,7 +894,7 @@ class GaussianDiffusion:
                                                size=model_kwargs['y'].shape,
                                                device=model_kwargs['y'].device)
             with th.no_grad():
-                if i in transformation_steps and transformation_fn is not None:
+                if transformation_fn is not None:
                   img = transformation_fn(img)
                 sample_fn = self.ddim_sample_with_grad if cond_fn_with_grad else self.ddim_sample
                 out = sample_fn(
